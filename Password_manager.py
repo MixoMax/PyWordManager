@@ -7,22 +7,12 @@ import time
 global key
 
 def encrypt(message, key):
-    encrypted = ""
-    for i in range(len(message)):
-        if message[i] == " ":
-            encrypted += " "
-        else:
-            encrypted += chr((ord(message[i]) + key - 97) % 26 + 97)
-    return encrypted
+    
+    return 0
 
 def decrypt(message, key):
-    decrypted = ""
-    for i in range(len(message)):
-        if message[i] == " ":
-            decrypted += " "
-        else:
-            decrypted += chr((ord(message[i]) - key - 97) % 26 + 97)
-    return decrypted
+    
+    return 0
 
 def scramble_key(key : str):
     #converts string key to int
