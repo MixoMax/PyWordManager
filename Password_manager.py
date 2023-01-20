@@ -1,6 +1,9 @@
 import math
 import csv
+import random
+import string
 import pyperclip
+
 
 global key
 
@@ -9,26 +12,84 @@ global key
 
 
 
-def encrypt(message, key):
-    encrypted_message = ""
+def encrypt(message : (str), key : (int)):
+    #key is a 1e256 int
+    chars = []
     for i in range(len(message)):
-        encrypted_message += chr((ord(message[i]) + key) % 255) if chr((ord(message[i]) + key) % 255) != "\n" else "¶"
-    return encrypted_message
+        chars.append(ord(message[i]))
+    
+    chars_normal = []
+    for i in range(len(chars)):
+        chars_normal.append(int(_normalize_key(chars[i], output_len=len(str(key)))))
+
+    chars_encrypted = []
+    for i in range(len(chars_normal)):
+        temp = (chars_normal[i] ^ key)
+        temp = _normalize_key(temp, output_len=len(str(key)))
+
+        chars_encrypted.append(temp)
+
+
+    def _special_xor(a : int, b : int, s : bool = False):
+        #special xor function that returns the number of 1s in the xor of two numbers
+        a,b = str(a), str(b)
+        if len(a) != len(b):
+            print(len(a), len(b))
+            return False
+        string = ""
+        if a[0] == "-" and b[0] == "-":
+            a = a[1:]
+            b = b[1:]
+            for i in range(len(a)):
+                string += "1" if a[i]>b[i] else "0"
+        elif a[0] == "-":
+            a = a[1:]
+            for i in range(len(a)):
+                string += "1" if a[i]>b[i] else "0"
+        elif b[0] == "-":
+            b = b[1:]
+            for i in range(len(b)):
+                string += "1" if b[i]>a[i] else "0"
+        else:
+            for i in range(len(a)):
+                string += "1" if a[i]>b[i] else "0"
+        return string.count("1") if s else string.count("0")
+    
+    output = ""
+    for i in range(len(chars_encrypted)):
+        output += chr(_special_xor(chars_encrypted[i], key, s=True))
+    
+    print(output)
+    print([ord(i) for i in output])
+    return output
+
+
+def _normalize_key(key_string : str, output_len : int = 256):
+    #normalizes a string to a given length using splicing or looping and returns the normalized string
+
+    key_string = str(key_string)
+    output_len = int(output_len)
+
+    if len(key_string) == output_len:
+        return key_string
+    elif len(key_string) > output_len:
+        key_string = key_string[:output_len]
+        return key_string
+    elif len(key_string) < output_len:
+        key_string = key_string * math.ceil(output_len / len(key_string)) if key_string[0] != "-" else "-" +str( key_string[1:] * (math.floor(output_len / (len(key_string)))+1))
+        return key_string[:output_len]
+    else:
+        return key_string
+        
+    
+    
+    
 
 
 
 
 def decrypt(message, key):
-    
-    #decrypts message using key
-
-    decrypted_message = ""
-    for i in range(len(message)):
-        if message[i] == "¶":
-            decrypted_message += chr((ord("\n") - key) % 255)
-        else:
-            decrypted_message += chr((ord(message[i]) - key) % 255)
-    return decrypted_message
+    return False
 
 def scramble_key(key : str):
     #converts string key to int
@@ -38,7 +99,10 @@ def scramble_key(key : str):
     for i in range(len(key)):
         key_eval += operators[i%int(len(operators))] + str(ord(key[i]))
     key_int = int(eval(key_eval))
-    return key_int
+
+    key = _normalize_key(str(key_int), 256) #normalize key to 256 characters
+    #NOTE: average key length before normalizing is ~ 150 < key length < 300, after normalizing is always 256, so the recursion pattern is not too noticeable
+    return key
 
 def key_strength(key, verbose = False):
     temp = key
@@ -271,5 +335,9 @@ def QATest():
     print("QA Test passed. (6)")
 
 
+key = "MixoMax"
+print(key)
+key = scramble_key(key)
+print(len(str(key)), "\t key len after scramble\n" )
 
-QATest()
+encrypt("Aufessen", int(key))
