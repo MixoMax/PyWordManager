@@ -1,8 +1,5 @@
 import math
-import random
-import string
-import os
-import time
+import csv
 import pyperclip
 
 global key
@@ -13,11 +10,12 @@ global key
 
 
 def encrypt(message, key):
-
     encrypted_message = ""
     for i in range(len(message)):
-        encrypted_message += chr((ord(message[i]) + key) % 255)
+        encrypted_message += chr((ord(message[i]) + key) % 255) if chr((ord(message[i]) + key) % 255) != "\n" else "¶"
     return encrypted_message
+
+
 
 
 def decrypt(message, key):
@@ -26,7 +24,10 @@ def decrypt(message, key):
 
     decrypted_message = ""
     for i in range(len(message)):
-        decrypted_message += chr((ord(message[i]) - key) % 255)
+        if message[i] == "¶":
+            decrypted_message += chr((ord("\n") - key) % 255)
+        else:
+            decrypted_message += chr((ord(message[i]) - key) % 255)
     return decrypted_message
 
 def scramble_key(key : str):
@@ -59,25 +60,23 @@ def key_strength(key, verbose = False):
             return True
 
 
-def save_password(name, password, key):
+def save_password(name : (str), password : (str), key):
     #write password to csv file
-    with open("./passwords.csv", "a") as f: #throws error for some characters
-        f.write(name + "," + str(encrypt(password, key)) + " ")
+    encrypted = encrypt(password, key)
+    print(encrypted)
+    f = open("./passwords.csv", "a", newline = "")
+    csv.writer(f).writerow([name, encrypted])
         
 
 def read_passwords(key):
     #passwords are stored in a csv file with the name of the password and the encrypted password
     names = []
     passwords = []
-    csv = open("./passwords.csv", "r")
-    for line in csv:
-        line = line.split(" ")
-        for i in line:
-            i = i.split(",")
-            if len(i) == 2:
-                names.append(i[0])
-                passwords.append(decrypt(i[1], key))
-    csv.close()
+    with open("./passwords.csv", "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            names.append(row[0])
+            passwords.append(decrypt(row[1], key))
     return names, passwords
 
 def list_passwords(key):
@@ -115,16 +114,18 @@ def _can_be_int(s):
     except ValueError:
         return False
 
-def delete_password(idx, key):
-    names, passwords = read_passwords(key)
-    names.pop(int(idx) - 1)
-    passwords.pop(int(idx) - 1)
-    csv = open("./passwords.csv", "w")
-    for i in range(len(names)):
-        csv.write(names[i] + "," + str(encrypt(passwords[i], key)) + " ")
-    csv.close()
-    print("Password deleted.")
-    main()
+def delete_password(idx, key, silent = False):
+    #deletes password from csv file by index
+    if _can_be_int(idx):
+        names, passwords = read_passwords(key)
+        names.pop(int(idx) - 1)
+        passwords.pop(int(idx) - 1)
+        with open("./passwords.csv", "w", newline = "") as f:
+            csv.writer(f).writerows(zip(names, passwords))
+        if not silent:
+            print("Password deleted.")
+    else:
+        print("Invalid idx." if not silent else "")
 
 def search_passwords(s, key):
     names, passwords = read_passwords(key)
@@ -184,6 +185,11 @@ def search_passwords(s, key):
 
 def main():
     global key
+    print("Welcome to the password manager!")
+    print("Please enter a key to encrypt your passwords with.")
+    key = input("Key: ")
+    print("Your key is " + key_strength(key, True))
+    key = scramble_key(key)
     print("[S]ave a password, [V]iew passwords?, s[E]arch passwords, [R]eenter key or [Q]uit?")
     choice = input("Choice: ")
     if choice.lower() == "s":
@@ -215,10 +221,55 @@ def main():
         main()
     
 
-if __name__ == "__main__" and 0 == 0:
-    print("Welcome to the password manager!")
-    print("Please enter a key to encrypt your passwords with.")
-    key = input("Key: ")
-    print("Your key is " + key_strength(key, True))
-    key = scramble_key(key)
-    main()
+def _clear_csv():
+    with open("./passwords.csv", "w", newline = "") as f:
+        csv.writer(f).writerows([])
+
+
+
+def QATest():
+    _clear_csv()
+    key = scramble_key("Auadf3wedfgsdgfeas")
+    print(len(str(key)))
+    C = 100
+    for i in range(C):
+        save_password("test", "test", key)
+
+    if len(read_passwords(key)[0]) != C: #test save_password and read_passwords for quantity
+        print("QA Test failed for save_password and read_passwords")
+        exit()
+    print("QA Test passed. (1)")
+
+    if read_passwords(key)[0][0] != "test": #test save_password and read_passwords for quality
+        print("QA Test failed for save_password and read_passwords")
+        exit()
+    print("QA Test passed. (2)")
+
+    if read_passwords(key)[1][0] != "test": #test save_password and read_passwords for quality
+        print("QA Test failed for save_password and read_passwords")
+        print(read_passwords(key)[1][0])
+        exit()
+    print("QA Test passed. (3)")
+
+    delete_password(1, key, silent=True)
+    if len(read_passwords(key)[0]) != C-1: #test delete_password
+        print("QA Test failed for delete_password")
+        print(read_passwords(key))
+        exit()
+    print("QA Test passed. (4)")
+
+    if decrypt(read_passwords(key)[1][0], key) != "test": #test decrypt
+        print("QA Test failed for decrypt (5)")
+        print(read_passwords(key)[1][0])
+        print(decrypt(read_passwords(key)[1][0], key))
+        exit()
+    print("QA Test passed. (5)")
+
+    if decrypt(encrypt("test", key), key) != "test": #test encrypt and decrypt function parity
+        print("QA Test failed for encrypt and decrypt function parity")
+        exit()
+    print("QA Test passed. (6)")
+
+
+
+QATest()
