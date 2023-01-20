@@ -13,56 +13,68 @@ global key
 
 
 def encrypt(message : (str), key : (int)):
-    #key is a 1e256 int
+    keymod = key % 256
+    keymod = keymod if keymod!= 0 else 255
+
+
     chars = []
     for i in range(len(message)):
-        chars.append(ord(message[i]))
+        temp = ((ord(message[i]) + keymod) % 256)
+        chars.append(chr(temp))
+    output = "".join(chars)
+
+    return output
     
-    chars_normal = []
-    for i in range(len(chars)):
-        chars_normal.append(int(_normalize_key(chars[i], output_len=len(str(key)))))
-
-    chars_encrypted = []
-    for i in range(len(chars_normal)):
-        temp = (chars_normal[i] ^ key)
-        temp = _normalize_key(temp, output_len=len(str(key)))
-
-        chars_encrypted.append(temp)
 
 
-    def _special_xor(a : int, b : int, s : bool = False):
-        #special xor function that returns the number of 1s in the xor of two numbers
-        a,b = str(a), str(b)
-        if len(a) != len(b):
-            print(len(a), len(b))
-            return False
-        string = ""
-        if a[0] == "-" and b[0] == "-":
-            a = a[1:]
-            b = b[1:]
-            for i in range(len(a)):
-                string += "1" if a[i]>b[i] else "0"
-        elif a[0] == "-":
-            a = a[1:]
-            for i in range(len(a)):
-                string += "1" if a[i]>b[i] else "0"
-        elif b[0] == "-":
-            b = b[1:]
-            for i in range(len(b)):
-                string += "1" if b[i]>a[i] else "0"
-        else:
-            for i in range(len(a)):
-                string += "1" if a[i]>b[i] else "0"
-        return string.count("1") if s else string.count("0")
-    
-    output = ""
-    for i in range(len(chars_encrypted)):
-        output += chr(_special_xor(chars_encrypted[i], key, s=True))
-    
-    print(output)
-    print([ord(i) for i in output])
+def decrypt(message : str, key : int):
+    keymod = key % 256
+    keymod = keymod if keymod!= 0 else 255
+
+    chars = []
+    for i in range(len(message)):
+        temp = ((ord(message[i]) - keymod) % 256)
+        chars.append(chr(temp))
+    output = "".join(chars)
+
     return output
 
+    
+
+
+def scramble_key(key : str, normal : bool = True, length : int = 256):
+
+    #converts string key to int
+    key_int = 13
+    operators = ["+", "**", "*", "//", "%", "-", "**", "+", "*", "-"]
+    key_eval = "0"
+    for i in range(len(key)):
+        key_eval += operators[i%int(len(operators))] + str(ord(key[i]))
+    key_int = int(eval(key_eval))
+
+    key = _normalize_key(str(key_int), length) if normal else key_int #normalize key to 256 characters
+    #NOTE: average key length before normalizing is ~ 150 < key length < 300, after normalizing is always 256, so the recursion pattern is not too noticeable
+    return int(key)
+
+
+def key_strength(key, verbose = False):
+    temp = key
+    temp = str(scramble_key(temp, False))
+    if len(temp) < 50:
+        if verbose:
+            return "weak (" + str(len(temp)) + ")"
+        else:
+            return False
+    elif len(temp) < 100:
+        if verbose:
+            return "medium (" + str(len(temp)) + ")"
+        else:
+            return True
+    else:
+        if verbose:
+            return "strong (" + str(len(temp)) + ")"
+        else:
+            return True
 
 def _normalize_key(key_string : str, output_len : int = 256):
     #normalizes a string to a given length using splicing or looping and returns the normalized string
@@ -80,49 +92,6 @@ def _normalize_key(key_string : str, output_len : int = 256):
         return key_string[:output_len]
     else:
         return key_string
-        
-    
-    
-    
-
-
-
-
-def decrypt(message, key):
-    return False
-
-def scramble_key(key : str):
-    #converts string key to int
-    key_int = 13
-    operators = ["+", "**", "*", "//", "%", "-", "**", "+", "*", "-"]
-    key_eval = "0"
-    for i in range(len(key)):
-        key_eval += operators[i%int(len(operators))] + str(ord(key[i]))
-    key_int = int(eval(key_eval))
-
-    key = _normalize_key(str(key_int), 256) #normalize key to 256 characters
-    #NOTE: average key length before normalizing is ~ 150 < key length < 300, after normalizing is always 256, so the recursion pattern is not too noticeable
-    return key
-
-def key_strength(key, verbose = False):
-    temp = key
-    temp = str(scramble_key(temp))
-    if len(temp) < 50:
-        if verbose:
-            return "weak (" + str(len(temp)) + ")"
-        else:
-            return False
-    elif len(temp) < 100:
-        if verbose:
-            return "medium (" + str(len(temp)) + ")"
-        else:
-            return True
-    else:
-        if verbose:
-            return "strong (" + str(len(temp)) + ")"
-        else:
-            return True
-
 
 def save_password(name : (str), password : (str), key):
     #write password to csv file
@@ -240,20 +209,8 @@ def search_passwords(s, key):
     
 
 
-
-            
-
-    
-
-
-
 def main():
     global key
-    print("Welcome to the password manager!")
-    print("Please enter a key to encrypt your passwords with.")
-    key = input("Key: ")
-    print("Your key is " + key_strength(key, True))
-    key = scramble_key(key)
     print("[S]ave a password, [V]iew passwords?, s[E]arch passwords, [R]eenter key or [Q]uit?")
     choice = input("Choice: ")
     if choice.lower() == "s":
@@ -276,68 +233,55 @@ def main():
         print("Goodbye!")
         exit()
     elif choice.lower() == "r":
-        print("Please enter a key to encrypt your passwords with.")
-        key = input("Key: ")
-        print("Your key is " + key_strength(key, True))
-        key = scramble_key(key)
+        _get_key()
         main()
     else:
         main()
+
+def _get_key():
+    global key
+    print("Welcome to the password manager!")
+    print("Please enter a key to encrypt your passwords with.")
+    key = input("Key: ")
+    print("Your key is " + key_strength(key, True))
+    key = scramble_key(key)
+    return key
+
+def test(c):
+    global key
+    c += 1
+    ran_key = "".join([random.choice(string.ascii_letters + string.digits) for i in range(10)])
+    ran_message = "".join([random.choice(string.ascii_letters + string.digits) for i in range(10)])
+
+
+    key = scramble_key(ran_key)
+
+    encrypted_password = encrypt(ran_message, key)
+    decrypted_password = decrypt(encrypted_password, key)
+
+    if ran_message == decrypted_password and encrypted_password != decrypted_password:
+        #print(str(c).ljust(8), ran_message.ljust(20), encrypted_password.ljust(20), decrypted_password.ljust(20))
+        a = 1
+    else:
+        print("Passwords do not match!")
+        print("key:\t", ran_key)
+        print("input:\t", ran_message)
+        print("encrypted:\t", encrypted_password)
+        print("decrypted:\t", decrypted_password)
+        quit()
     
-
-def _clear_csv():
-    with open("./passwords.csv", "w", newline = "") as f:
-        csv.writer(f).writerows([])
+    return c
 
 
+TEST_MODE = True
 
-def QATest():
-    _clear_csv()
-    key = scramble_key("Auadf3wedfgsdgfeas")
-    print(len(str(key)))
-    C = 100
-    for i in range(C):
-        save_password("test", "test", key)
-
-    if len(read_passwords(key)[0]) != C: #test save_password and read_passwords for quantity
-        print("QA Test failed for save_password and read_passwords")
-        exit()
-    print("QA Test passed. (1)")
-
-    if read_passwords(key)[0][0] != "test": #test save_password and read_passwords for quality
-        print("QA Test failed for save_password and read_passwords")
-        exit()
-    print("QA Test passed. (2)")
-
-    if read_passwords(key)[1][0] != "test": #test save_password and read_passwords for quality
-        print("QA Test failed for save_password and read_passwords")
-        print(read_passwords(key)[1][0])
-        exit()
-    print("QA Test passed. (3)")
-
-    delete_password(1, key, silent=True)
-    if len(read_passwords(key)[0]) != C-1: #test delete_password
-        print("QA Test failed for delete_password")
-        print(read_passwords(key))
-        exit()
-    print("QA Test passed. (4)")
-
-    if decrypt(read_passwords(key)[1][0], key) != "test": #test decrypt
-        print("QA Test failed for decrypt (5)")
-        print(read_passwords(key)[1][0])
-        print(decrypt(read_passwords(key)[1][0], key))
-        exit()
-    print("QA Test passed. (5)")
-
-    if decrypt(encrypt("test", key), key) != "test": #test encrypt and decrypt function parity
-        print("QA Test failed for encrypt and decrypt function parity")
-        exit()
-    print("QA Test passed. (6)")
-
-
-key = "MixoMax"
-print(key)
-key = scramble_key(key)
-print(len(str(key)), "\t key len after scramble\n" )
-
-encrypt("Aufessen", int(key))
+if __name__ == "__main__":
+    if not TEST_MODE:
+        _get_key()
+        main()
+    elif TEST_MODE:
+        c = test(0)
+        while c < 1_000_000:
+            c = test(c)
+            if c % 1000 == 0:
+                print(str(c).ljust(8), end="\r", flush=True)
