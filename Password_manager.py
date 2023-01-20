@@ -7,17 +7,28 @@ import time
 global key
 
 def encrypt(message, key):
-    
-    return 0
+
+    encrypted_message = ""
+    for i in range(len(message)):
+        print((ord(message[i]) + key) % 255)
+        encrypted_message += chr((ord(message[i]) + key) % 255)
+    print(encrypted_message)
+    return encrypted_message
+
 
 def decrypt(message, key):
     
-    return 0
+    #decrypts message using key
+
+    decrypted_message = ""
+    for i in range(len(message)):
+        decrypted_message += chr((ord(message[i]) - key) % 255)
+    return decrypted_message
 
 def scramble_key(key : str):
     #converts string key to int
     key_int = 0
-    operators = ["+", "**", "*", "//", "%", "-"]
+    operators = ["+", "**", "*", "//", "%", "-", "**", "+", "*", "-"]
     key_eval = "0"
     for i in range(len(key)):
         key_eval += operators[i%int(len(operators))] + str(ord(key[i]))
@@ -33,8 +44,9 @@ def key_strength(key, verbose = False):
         return "Strong" if verbose == False else "Strong (" + str(len(str(scramble_key(key)))) + ")"
 
 def save_password(name, password, key):
-    with open("./passwords.csv", "a") as f:
-        f.write(name + "," + encrypt(password, key) + "\n")
+    #write password to csv file
+    with open("./passwords.csv", "a") as f: #throws error for some characters
+        f.write(name + "," + str(encrypt(password, key)) + " ")
         
 
 def read_passwords(key):
@@ -93,9 +105,6 @@ def search_passwords(s, key):
         print(names[names_int.index(i)].ljust(20) + passwords[names_int.index(i)])
             
 
-
-
-    
     
 
 
@@ -133,10 +142,7 @@ def main():
         main()
     
 
-
-
-
-if __name__ == "__main__":
+if __name__ == "__main__" and 0 == 0:
     print("Welcome to the password manager!")
     print("Please enter a key to encrypt your passwords with.")
     key = input("Key: ")
