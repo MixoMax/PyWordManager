@@ -221,14 +221,13 @@ def main():
         main()
     
 
-def _clear_csv():
+def _QA_clear_csv():
     with open("./passwords.csv", "w", newline = "") as f:
         csv.writer(f).writerows([])
 
 
-
 def QATest():
-    _clear_csv()
+    _QA_clear_csv()
     key = scramble_key("Auadf3wedfgsdgfeas")
     print(len(str(key)))
     C = 100
@@ -272,4 +271,5 @@ def QATest():
 
 
 
-QATest()
+if __name__ == "__main__":
+    main()
