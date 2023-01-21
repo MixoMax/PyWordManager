@@ -15,13 +15,25 @@ global key
 def encrypt(message : (str), key : (int)):
     keymod = key % 256
     keymod = keymod if keymod!= 0 else 255
+    backup_key = scramble_key(str(key + 1)[192:], False) % 256
 
 
     chars = []
+
+    key_arr = [0 for i in range(len(message))]
+
     for i in range(len(message)):
         temp = ((ord(message[i]) + keymod) % 256)
-        chars.append(chr(temp))
-    output = "".join(chars)
+        if chr(temp) not in [",", " ", "", ";", "\t", "\n", "\r"]:
+            chars.append(chr(temp))
+            key_arr[i] = 0
+        else:
+            temp = ((ord(message[i]) + backup_key) % 256)
+            chars.append(chr(temp))
+            key_arr[i] = 1
+        
+
+    output = str("".join(chars)) + ";" + str("".join([str(i) for i in key_arr]))
 
     return output
     
@@ -30,11 +42,26 @@ def encrypt(message : (str), key : (int)):
 def decrypt(message : str, key : int):
     keymod = key % 256
     keymod = keymod if keymod!= 0 else 255
+    backup_key = scramble_key(str(key + 1)[192:], False) % 256
+
+    key_arr = message[message.rfind(";")+1:]
+    message = message[:message.rfind(";")]
+
+    key_arr = [int(i) for i in key_arr]
+    print(key_arr)
+    
+
+    
+
 
     chars = []
     for i in range(len(message)):
-        temp = ((ord(message[i]) - keymod) % 256)
-        chars.append(chr(temp))
+        if key_arr[i] == 0:
+            temp = ((ord(message[i]) - keymod) % 256)
+            chars.append(chr(temp))
+        else:
+            temp = ((ord(message[i]) - backup_key) % 256)
+            chars.append(chr(temp))
     output = "".join(chars)
 
     return output
