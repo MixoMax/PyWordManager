@@ -101,7 +101,29 @@ def search_passwords(s, key):
     print("Name".ljust(20) + "Password")
     for i in _binary_search(names_int, s_int):
         print(names[names_int.index(i)].ljust(20) + passwords[names_int.index(i)])
-            
+
+
+
+def create_password(blocks, block_length, include_punctuation, name):
+    print("Creating password!\n\nPlease wait...")
+    possible_characters = string.ascii_letters + string.digits
+    password = ""
+    
+    if include_punctuation:
+        block_length -= 1
+
+    for i in range(blocks):
+        block = []
+        for _ in range(block_length):
+            block.append(random.choice(possible_characters))
+        if include_punctuation:
+            block.append(random.choice(string.punctuation))
+        random.shuffle(block)
+        password += "".join(block)
+        if i != blocks -1: password += "-"
+    
+    save_password(name, password, key)
+    print("Your password for '" + name + "' was created and saved! The password is: " + password)
 
 
 
@@ -112,7 +134,7 @@ def search_passwords(s, key):
 
 def main():
     global key
-    print("[S]ave a password, [V]iew passwords?, s[E]arch passwords, [R]eenter key or [Q]uit?")
+    print("[S]ave a password, [V]iew passwords, [C]reate random password, s[E]arch passwords, [R]eenter key or [Q]uit?")
     choice = input("Choice: ")
     if choice.lower() == "s":
         name = input("Name for new Password!: ")
@@ -124,6 +146,43 @@ def main():
     elif choice.lower() == "v":
         print("Here are your passwords:")
         list_passwords(key)
+        main()
+    elif choice.lower() == "c":
+        blocks = 4
+        block_length = 5
+        include_punctuation = True
+
+
+        name = input("Name for new Password!: ")
+        input0 = input("How many blocks? (Between 2 and 6, default is 4): ")
+        try:
+            input0 = int(input0)
+        except:
+            input0 = None
+        if type(input0) is int and input0 > 1 and input0 < 7:
+            print("Block count set to " + str(input0) + ".")
+            blocks = input0
+        else:
+            print("Block count set to default (4).")
+
+        input1 = input("How long should each block be? (Between 3 and 10, default is 5): ")
+        try:
+            input1 = int(input1)
+        except:
+            input1 = None
+        if type(input1) is int and input1 > 2 and input1 < 11:
+            print("Block length set to " + str(input1) + ".")
+            block_length = input1
+        else:
+            print("Block length set to default (5).")
+
+        input2 = input("Include punctuation? (y/n, default is y): ")
+        if input2.lower() == "n":
+            print("Punctuation set to False.")
+            include_punctuation = False
+        else:
+            print("Punctuation set to default (True).")
+        create_password(blocks, block_length, include_punctuation, name)
         main()
     elif choice.lower() == "e":
         print("Please enter the name of the password you would like to search for.")
