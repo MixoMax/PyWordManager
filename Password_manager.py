@@ -8,13 +8,14 @@ import os
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 global key
-
+global verbose
+verbose = True
 
 #TODO:
 # OO function for ascii table
 # csv handling
 
-def encrypt(message : (str), key : (int)):
+def encrypt(message : (str), key : (int), verbose : bool = False):
     keymod = key % 256
     keymod = keymod if keymod!= 0 else 255
     backup_key = scramble_key(str(key + 1)[192:], False) % 256
@@ -23,9 +24,9 @@ def encrypt(message : (str), key : (int)):
     chars = []
 
     key_arr = [0 for i in range(len(message))]
-
     for i in range(len(message)):
         temp = ((ord(message[i]) + keymod) % 256)
+        if verbose: print(temp.ljust(5), "ord number")
         if chr(temp) not in [",", " ", "", ";", "\t", "\n", "\r"]:
             chars.append(chr(temp))
             key_arr[i] = 0
@@ -33,7 +34,6 @@ def encrypt(message : (str), key : (int)):
             temp = ((ord(message[i]) + backup_key) % 256)
             chars.append(chr(temp))
             key_arr[i] = 1
-        
 
     output = str("".join(chars)) + ";" + str("".join([str(i) for i in key_arr]))
 
@@ -76,7 +76,7 @@ def scramble_key(key : str, normal : bool = True, length : int = 256):
     #NOTE: average key length before normalizing is ~ 150 < key length < 300, after normalizing is always 256, so the recursion pattern is not too noticeable
     return int(key)
 
-def key_strength(key, verbose = False):
+def key_strength(key, verbose : bool = False):
     temp = key
     temp = str(scramble_key(temp, False))
     if len(temp) < 50:
@@ -112,12 +112,13 @@ def _normalize_key(key_string : str, output_len : int = 256):
     else:
         return key_string
 
-def save_password(name : (str), password : (str), key):
+def save_password(name : (str), password : (str), key : int):
     #write password to csv file
     encrypted = encrypt(password, key)
-    print(encrypted)
-    f = open("./passwords.csv", "a", newline = "")
-    csv.writer(f).writerow([name, encrypted])
+    print(encrypted, "encrypted password")
+    print(name, decrypt(encrypted, key), "decrypted password")
+    f = open("./passwords.csv", "a")
+    csv.writer(f).writerow((name, encrypted))
         
 
 def read_passwords(key):
@@ -248,7 +249,8 @@ def _can_be_int(s):
     except ValueError:
         return False
     
-   
+
+TEST_MODE = True
     
     
 def _save():
@@ -304,6 +306,9 @@ def _reenter_key():
 def main():
     global key
     print("[S]ave a password, [V]iew passwords, [C]reate random password, s[E]arch passwords, [R]eenter key or [Q]uit?")
+    
+    
+    
     choice = input("Choice: ").lower()
     match choice:
         case "s": _save()
