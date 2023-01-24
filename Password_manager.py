@@ -1,52 +1,123 @@
 import math
+import csv
 import random
 import string
+import pyperclip
 import os
-import time
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 global key
 
-def encrypt(message, key):
-    encrypted = ""
-    for i in range(len(message)):
-        if message[i] == " ":
-            encrypted += " "
-        else:
-            encrypted += chr((ord(message[i]) + key - 97) % 26 + 97)
-    return encrypted
 
-def decrypt(message, key):
-    decrypted = ""
-    for i in range(len(message)):
-        if message[i] == " ":
-            decrypted += " "
-        else:
-            decrypted += chr((ord(message[i]) - key - 97) % 26 + 97)
-    return decrypted
+#TODO:
+# OO function for ascii table
+# csv handling
 
-def scramble_key(key : str):
+def encrypt(message : (str), key : (int)):
+    keymod = key % 256
+    keymod = keymod if keymod!= 0 else 255
+    backup_key = scramble_key(str(key + 1)[192:], False) % 256
+
+
+    chars = []
+
+    key_arr = [0 for i in range(len(message))]
+
+    for i in range(len(message)):
+        temp = ((ord(message[i]) + keymod) % 256)
+        if chr(temp) not in [",", " ", "", ";", "\t", "\n", "\r"]:
+            chars.append(chr(temp))
+            key_arr[i] = 0
+        else:
+            temp = ((ord(message[i]) + backup_key) % 256)
+            chars.append(chr(temp))
+            key_arr[i] = 1
+        
+
+    output = str("".join(chars)) + ";" + str("".join([str(i) for i in key_arr]))
+
+    return output
+
+def decrypt(message : str, key : int):
+    keymod = key % 256
+    keymod = keymod if keymod!= 0 else 255
+    backup_key = scramble_key(str(key + 1)[192:], False) % 256
+
+    key_arr = message[message.rfind(";")+1:]
+    message = message[:message.rfind(";")]
+
+    key_arr = [int(i) for i in key_arr]
+    print(key_arr)
+
+    chars = []
+    for i in range(len(message)):
+        if key_arr[i] == 0:
+            temp = ((ord(message[i]) - keymod) % 256)
+            chars.append(chr(temp))
+        else:
+            temp = ((ord(message[i]) - backup_key) % 256)
+            chars.append(chr(temp))
+    output = "".join(chars)
+
+    return output
+
+def scramble_key(key : str, normal : bool = True, length : int = 256):
+
     #converts string key to int
-    key_int = 0
-    operators = ["+", "**", "*", "//", "%", "-"]
+    key_int = 13
+    operators = ["+", "**", "*", "//", "%", "-", "**", "+", "*", "-"]
     key_eval = "0"
     for i in range(len(key)):
         key_eval += operators[i%int(len(operators))] + str(ord(key[i]))
     key_int = int(eval(key_eval))
-    return key_int
+
+    key = _normalize_key(str(key_int), length) if normal else key_int #normalize key to 256 characters
+    #NOTE: average key length before normalizing is ~ 150 < key length < 300, after normalizing is always 256, so the recursion pattern is not too noticeable
+    return int(key)
 
 def key_strength(key, verbose = False):
-    if(scramble_key(key) < 10000):
-        return "Weak" if verbose == False else "Weak (" + str(len(str(scramble_key(key)))) + ")"
-    elif(scramble_key(key) < 100000):
-        return "Medium" if verbose == False else "Medium (" + str(len(str(scramble_key(key)))) + ")"
+    temp = key
+    temp = str(scramble_key(temp, False))
+    if len(temp) < 50:
+        if verbose:
+            return "weak (" + str(len(temp)) + ")"
+        else:
+            return False
+    elif len(temp) < 100:
+        if verbose:
+            return "medium (" + str(len(temp)) + ")"
+        else:
+            return True
     else:
-        return "Strong" if verbose == False else "Strong (" + str(len(str(scramble_key(key)))) + ")"
+        if verbose:
+            return "strong (" + str(len(temp)) + ")"
+        else:
+            return True
 
-def save_password(name, password, key):
-    with open("./passwords.csv", "a") as f:
-        f.write(name + "," + encrypt(password, key) + "\n")
+def _normalize_key(key_string : str, output_len : int = 256):
+    #normalizes a string to a given length using splicing or looping and returns the normalized string
+
+    key_string = str(key_string)
+    output_len = int(output_len)
+
+    if len(key_string) == output_len:
+        return key_string
+    elif len(key_string) > output_len:
+        key_string = key_string[:output_len]
+        return key_string
+    elif len(key_string) < output_len:
+        key_string = key_string * math.ceil(output_len / len(key_string)) if key_string[0] != "-" else "-" +str( key_string[1:] * (math.floor(output_len / (len(key_string)))+1))
+        return key_string[:output_len]
+    else:
+        return key_string
+
+def save_password(name : (str), password : (str), key):
+    #write password to csv file
+    encrypted = encrypt(password, key)
+    print(encrypted)
+    f = open("./passwords.csv", "a", newline = "")
+    csv.writer(f).writerow([name, encrypted])
         
 
 def read_passwords(key):
@@ -54,56 +125,98 @@ def read_passwords(key):
     names = []
     passwords = []
     with open("./passwords.csv", "r") as f:
-        for line in f:
-            line = line.split(",")
-            names.append(line[0])
-            passwords.append(decrypt(line[1], key))
+        reader = csv.reader(f)
+        for row in reader:
+            names.append(row[0])
+            passwords.append(decrypt(row[1], key))
     return names, passwords
 
 def list_passwords(key):
     names, passwords = read_passwords(key)
     #print out the names and passwords as ascii tables
-    print("Name".ljust(20) + "Password")
-    for i in range(len(names)):
-        print(names[i].ljust(20) + passwords[i])
+    print("idx".ljust(5) + "Name".ljust(20) + "Password")
+    print("-" * 40)
+    c = 0
+    pswd_array = []
+    for name in names:
+        c += 1
+        if len(name) < 20:
+            print(str(c).ljust(5) + name.ljust(20) + passwords[names.index(name)])
+        else:
+            for i in range(math.ceil(len(name) / 19)):
+                print(str(c).ljust(5) + name[i*19:(i+1)*19].ljust(20) + passwords[names.index(name)] if i == 0 else "".ljust(5) + name[i*19:(i+1)*19].ljust(20))
+        pswd_array.append(passwords[names.index(name)])
+    print("-" * 40)
+    print("Password idx to copy to clipboard, [R]eturn to main menu, [Q]uit, s[e]arch passwords or [D]elete password?")
+    choice = input("Choice: ")
+    match choice.lower():
+        case "r": main()
+        case "q": quit()
+        case "e": search_passwords(input("Search: "), key)
+        case "d": delete_password(input("Password idx to delete: "), key)
+
+    if _can_be_int(choice) and int(choice) <= len(pswd_array):
+        pyperclip.copy(pswd_array[int(choice) - 1])
+        print("Password for " + names[int(choice) - 1] + " copied to clipboard.")
     
-    
+def delete_password(idx, key, silent = False):
+    #deletes password from csv file by index
+    if _can_be_int(idx):
+        names, passwords = read_passwords(key)
+        names.pop(int(idx) - 1)
+        passwords.pop(int(idx) - 1)
+        with open("./passwords.csv", "w", newline = "") as f:
+            csv.writer(f).writerows(zip(names, passwords))
+        if not silent:
+            print("Password deleted.")
+    else:
+        print("Invalid idx." if not silent else "")
 
 def search_passwords(s, key):
     names, passwords = read_passwords(key)
     names = [x.lower() for x in names]
     names, passwords = (list(t) for t in zip(*sorted(zip(names, passwords)))) # sort by names
     
-    #assume passwords are sorted by name
-    #replace names with int values
+    arr = []
 
-    names_int = []
-    for i in range(len(names)):
-        names_int.append(0)
-        for j in range(len(names[i])):
-            j = len(names[i]) - j - 1
-            names_int[i] += ord(names[i][j]) * j
-    
-    s_int = 0
-    for i in range(len(s)):
-        i = len(s) - i - 1
-        s_int += ord(s[i]) * i
+    def _score(search, name):
+        #returns a score for how similar two strings are
+        #score += 1 for each matching character
+        #score += 2 for each matching character in the same position
 
-    def _binary_search(arr, search):
-        if len(arr) == 0:
-            return False
-        if(len(arr) < 10):
-            return arr
-        mid = len(arr) // 2
-        if arr[mid] > search:
-            return _binary_search(arr[:mid], search)
+        #q: which way are s1 and s2 supposed to be?
+        #a: s1 is the search string, s2 is the password name
+        score = 0
+        for i in range(len(search)):
+            if search[i] == name[i]:
+                score += 2
+            elif search[i] in name:
+                score += 1
+        return score
+
+    for name in names:
+        arr += [[name, _score(s.lower(), name)]]
+    arr = sorted(arr, key=lambda x: x[1], reverse=True)
+    print("idx".ljust(5) + "Name".ljust(20) + "Password")
+    print("-" * 40)
+    c = 0
+    pswd_array = []
+    for i in arr:
+        c += 1
+        if len(i[0]) < 20:
+            print(str(c).ljust(5) + i[0].ljust(20) + passwords[names.index(i[0])])
         else:
-            return _binary_search(arr[mid+1:], search)
-    
-    print("Name".ljust(20) + "Password")
-    for i in _binary_search(names_int, s_int):
-        print(names[names_int.index(i)].ljust(20) + passwords[names_int.index(i)])
-
+            for i in range(math.ceil(len(name) / 19)):
+                print(str(c).ljust(5) + i[0][i*19:(i+1)*19].ljust(20) + passwords[names.index(i[0])] if i == 0 else "".ljust(5) + i[0][i*19:(i+1)*19].ljust(20))
+        pswd_array.append(passwords[names.index(i[0])])
+    print("-" * 40)
+    print("Password idx to copy to clipboard, [R]eturn to main menu, [Q]uit, s[e]arch passwords or [D]elete password?")
+    choice = input("Choice: ")
+    match choice.lower():
+        case "r": main()
+        case "q": quit()
+        case "e": search_passwords(input("Search: "), key)
+        case "d": delete_password(input("Password idx to delete: "), key)
 
 
 def create_password(blocks, block_length, include_punctuation, name):
