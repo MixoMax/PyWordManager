@@ -4,6 +4,8 @@ import string
 import os
 import time
 
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 global key
 
 def encrypt(message, key):
@@ -126,28 +128,30 @@ def create_password(blocks, block_length, include_punctuation, name):
     print("Your password for '" + name + "' was created and saved! The password is: " + password)
 
 
-
+def _can_be_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+    
+   
     
     
+def _save():
+    name = input("Name for new Password!: ")
+    print("Please enter the password you would like to save.")
+    password = input("Password: ")
+    save_password(name, password, key)
+    print("Password saved!")
+    main()
 
+def _list(key):
+    print("Here are your passwords:")
+    list_passwords(key)
+    main()
 
-
-def main():
-    global key
-    print("[S]ave a password, [V]iew passwords, [C]reate random password, s[E]arch passwords, [R]eenter key or [Q]uit?")
-    choice = input("Choice: ")
-    if choice.lower() == "s":
-        name = input("Name for new Password!: ")
-        print("Please enter the password you would like to save.")
-        password = input("Password: ")
-        save_password(name, password, key)
-        print("Password saved!")
-        main()
-    elif choice.lower() == "v":
-        print("Here are your passwords:")
-        list_passwords(key)
-        main()
-    elif choice.lower() == "c":
+def _create():
         blocks = 4
         block_length = 5
         include_punctuation = True
@@ -155,54 +159,48 @@ def main():
 
         name = input("Name for new Password!: ")
         input0 = input("How many blocks? (Between 2 and 6, default is 4): ")
-        try:
-            input0 = int(input0)
-        except:
-            input0 = None
-        if type(input0) is int and input0 > 1 and input0 < 7:
-            print("Block count set to " + str(input0) + ".")
-            blocks = input0
-        else:
-            print("Block count set to default (4).")
+        input0 = int(input0) if _can_be_int(input0) else None
+        
+        print("Block count set to " + str(input0) + "." if type(input0) is int and input0 > 1 and input0 < 7 else "Block count set to default (4).")
 
         input1 = input("How long should each block be? (Between 3 and 10, default is 5): ")
-        try:
-            input1 = int(input1)
-        except:
-            input1 = None
-        if type(input1) is int and input1 > 2 and input1 < 11:
-            print("Block length set to " + str(input1) + ".")
-            block_length = input1
-        else:
-            print("Block length set to default (5).")
+        input1 = int(input1) if _can_be_int(input1) else None
+        
+        print("Block length set to " + str(input1) + "." if type(input1) is int and input1 > 2 and input1 < 11 else "Block length set to default (5).")
 
         input2 = input("Include punctuation? (y/n, default is y): ")
-        if input2.lower() == "n":
-            print("Punctuation set to False.")
-            include_punctuation = False
-        else:
-            print("Punctuation set to default (True).")
+        input2 = False if input2.lower() == "n" else True
+        print("Punctuation set to " + ("yes" if input2 else "no") + "." if type(input2) is bool else "Punctuation set to default (yes).")
+        
         create_password(blocks, block_length, include_punctuation, name)
         main()
-    elif choice.lower() == "e":
-        print("Please enter the name of the password you would like to search for.")
-        name = input("Name: ")
-        search_passwords(name, key)
-        main()
-    elif choice.lower() == "q":
-        print("Goodbye!")
-        exit()
-    elif choice.lower() == "r":
-        print("Please enter a key to encrypt your passwords with.")
-        key = input("Key: ")
-        print("Your key is " + key_strength(key, True))
-        key = scramble_key(key)
-        main()
-    else:
-        main()
+        
+def _search():
+    print("Please enter the name of the password you would like to search for.")
+    name = input("Name: ")
+    search_passwords(name, key)
+    main()
+
+def _reenter_key():
+    print("Please enter a key to encrypt your passwords with.")
+    key = input("Key: ")
+    print("Your key is " + key_strength(key, True))
+    key = scramble_key(key)
+    main()
+
+def main():
+    global key
+    print("[S]ave a password, [V]iew passwords, [C]reate random password, s[E]arch passwords, [R]eenter key or [Q]uit?")
+    choice = input("Choice: ").lower()
+    match choice:
+        case "s": _save()
+        case "v": _list(key)
+        case "c": _create()
+        case "e": _search()
+        case "q": print("Goodbye!"); exit()
+        case "r": _reenter_key()
+        case _: main()
     
-
-
 
 
 if __name__ == "__main__":
