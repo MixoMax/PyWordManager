@@ -3,6 +3,10 @@ import csv
 import random
 import string
 import pyperclip
+import os
+
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
 global key
@@ -24,7 +28,7 @@ def encrypt(message : (str), key : (int)):
 
     for i in range(len(message)):
         temp = ((ord(message[i]) + keymod) % 256)
-        if chr(temp) not in [",", " ", "", ";", "\t", "\n", "\r"]:
+        if chr(temp) not in [",", " ", "", ";", "\t", "\n", "\r", "Î"]:
             chars.append(chr(temp))
             key_arr[i] = 0
         else:
@@ -33,7 +37,7 @@ def encrypt(message : (str), key : (int)):
             key_arr[i] = 1
         
 
-    output = str("".join(chars)) + ";" + str("".join([str(i) for i in key_arr]))
+    output = (str("".join(chars)), str("".join([str(i) for i in key_arr])))
 
     return output
     
@@ -47,11 +51,11 @@ def decrypt(message : str, key : int):
     key_arr = message[message.rfind(";")+1:]
     message = message[:message.rfind(";")]
 
-    key_arr = [int(i) for i in key_arr]
-    print(key_arr)
-    
-
-    
+    for key in key_arr:
+        if key not in ["0", "1", 0, 1]:
+            print("ka", key_arr)
+        else:
+            key_arr = [int(i) for i in key_arr]
 
 
     chars = []
@@ -120,24 +124,47 @@ def _normalize_key(key_string : str, output_len : int = 256):
     else:
         return key_string
 
+
+def random_string(length : int = -1):
+    if length == -1:
+        length = random.randint(5, 256)
+    
+    temp = "".join([random.choice(string.ascii_letters + string.digits) for i in range(length)])
+    return temp.replace("Î", "")
+
+
 def save_password(name : (str), password : (str), key):
-    #write password to csv file
-    encrypted = encrypt(password, key)
-    print(encrypted)
-    f = open("./passwords.csv", "a", newline = "")
-    csv.writer(f).writerow([name, encrypted])
+    #saves a password to the csv file
+    name, name_key_arr = encrypt(name, key)
+    password, pswd_key_arr = encrypt(password, key)
+    text = password + "Î" + random_string()
+    tup = (name, text)
+    print("w", tup)
+    with open("passwords.csv", "a") as f:
+        writer = csv.writer(f)
+        writer.writerow(tup)
+
+
         
 
 def read_passwords(key):
-    #passwords are stored in a csv file with the name of the password and the encrypted password
-    names = []
-    passwords = []
-    with open("./passwords.csv", "r") as f:
+    with open("passwords.csv", "r") as f:
         reader = csv.reader(f)
-        for row in reader:
-            names.append(row[0])
-            passwords.append(decrypt(row[1], key))
-    return names, passwords
+        text = []
+        names = []
+        for tup1 in reader:
+            print("r", tup1)
+            text.append(tup1[1])
+            names.append(tup1[0])
+    
+    for i in range(len(text)):
+        names[i] = decrypt(names[i], key)
+        password = text[i][:text[i].find("Î")]
+        text[i] = decrypt(password, key)
+    return names, text
+
+
+
 
 def list_passwords(key):
     names, passwords = read_passwords(key)
@@ -274,6 +301,11 @@ def _get_key():
     key = scramble_key(key)
     return key
 
+def _single_digit_key(key):
+    global single_digit_key
+
+    single_digit_key = str(key)[int((int(str(key)[-1])/10) * len(str(key)))]
+
 def test(c):
     global key
     c += 1
@@ -300,11 +332,12 @@ def test(c):
     return c
 
 
-TEST_MODE = True
+TEST_MODE = False
 
 if __name__ == "__main__":
     if not TEST_MODE:
         _get_key()
+
         main()
     elif TEST_MODE:
         c = test(0)
