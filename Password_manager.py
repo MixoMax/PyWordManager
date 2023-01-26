@@ -43,13 +43,19 @@ def encrypt(message : (str), key : (int)):
     
 
 
-def decrypt(message : str, key : int):
+def decrypt(message : str, key : int, key_arr : list = [0]):
     keymod = key % 256
     keymod = keymod if keymod!= 0 else 255
     backup_key = scramble_key(str(key + 1)[192:], False) % 256
 
-    key_arr = message[message.rfind(";")+1:]
-    message = message[:message.rfind(";")]
+    if key_arr == [0]:
+        key_arr = [int(i) for i in message.split(";")[1]]
+        message = message.split(";")[0]
+    elif len(key_arr) == len(message):
+        key_arr = [int(i) for i in key_arr]
+    else:
+        key_arr = [0 for i in range(len(message))]
+        
 
     for key in key_arr:
         if key not in ["0", "1", 0, 1]:
@@ -134,11 +140,9 @@ def random_string(length : int = -1):
 
 
 def save_password(name : (str), password : (str), key):
-    #saves a password to the csv file
-    name, name_key_arr = encrypt(name, key)
-    password, pswd_key_arr = encrypt(password, key)
-    text = password + "Î" + random_string()
-    tup = (name, text)
+    #saves password to csv file
+    #tuple format: (encrypted name, encrypted password + random string, password length, key_arr_name, key_arr_password)
+    tup = (encrypt(name, key)[0], encrypt(password, key)[0] + "Î" + random_string(), len(password), encrypt(name, key)[1], encrypt(password, key)[1])
     print("w", tup)
     with open("passwords.csv", "a") as f:
         writer = csv.writer(f)
@@ -149,19 +153,16 @@ def save_password(name : (str), password : (str), key):
 
 def read_passwords(key):
     with open("passwords.csv", "r") as f:
-        reader = csv.reader(f)
-        text = []
-        names = []
-        for tup1 in reader:
-            print("r", tup1)
-            text.append(tup1[1])
-            names.append(tup1[0])
-    
-    for i in range(len(text)):
-        names[i] = decrypt(names[i], key)
-        password = text[i][:text[i].find("Î")]
-        text[i] = decrypt(password, key)
-    return names, text
+        reader = list(csv.reader(f))
+        names = passwords = []
+        for row in reader:
+            print("r", row)
+            name = decrypt(row[0], key, row[3])
+            password = decrypt(row[1].split("Î")[0], key, row[4])
+            names.append(name)
+            passwords.append(password)
+            
+    return (names, passwords)
 
 
 
